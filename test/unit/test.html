@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>07_面试题2</title>
+</head>
+
+<body>
+
+    <script type="text/javascript">
+        //  function Father(age, name) {
+        //     this.a = '22'
+        // }
+        // function Children() {
+        //     Father.call(this)
+        // }
+        // let children =  new Children();
+        // console.log(children.a);
+        // 组合继承
+        // 实现：
+        // 组合上述两种方法就是组合继承。用原型链实现对原型属性和方法的继承，
+        // 借用构造函数技术来实现实例属性的继承。
+        // 缺点：
+        // 由于调用了两次父类，所以产生了两份实例
+        // 优点：
+        // 函数可以复用
+        // 不存在引用属性问题
+        // 可以继承属性和方法，并且可以继承原型的属性和方法
+
+
+        // function Father(name) { // 这里的name 就是 Son 传过来的
+        //     this.name = name
+        //     this.colors = [1, 2]
+        // }
+
+        // Father.prototype.sayName = function () {
+        //     alert(this.name)
+        // }
+
+        // function Son(name, age) {
+        //     //继承实例属性，第一次调用Father()
+        //     Father.call(this, name) // 这里通过 call 传过去 name  继承实例属性
+        //     this.age = age
+        // }
+        // Son.prototype = new Father() // 继承父类方法，第二次调用 Father
+        // Son.prototype.ff = function () { // 子类的方法
+        //     console.log('666');
+        // }
+        // var aa = new Son('小明', 5)
+        // aa.colors.push(3)
+        // console.log(aa); // 打印了 父类的属性 和方法   以及子类的方法
+        // var bb = new Son('小红', 50)
+        // bb.colors.push(999999)
+        // bb.sex = '女';
+        // console.log(bb); // 打印了 父类的属性 和方法   以及子类的方法
+
+        // var json = { abc: "123", bcs: "321" }
+        // console.log(json.abc);
+        // // stringify:把对象转成json格式
+        // console.log(JSON.stringify(json).abc + "");
+        // var str = 'http://www.baidu.com';
+        // str = encodeURIComponent(str);
+        // console.log(str);
+
+        
+    </script>
+</body>
+
+</html>

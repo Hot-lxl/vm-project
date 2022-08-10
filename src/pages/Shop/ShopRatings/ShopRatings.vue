@@ -1,0 +1,457 @@
+<template>
+  <div class="ratings" ref="ratings">
+    <div class="ratings-content">
+      <div class="overview">
+        <div class="overview-left">
+          <h1 class="score">{{ info.score }}</h1>
+          <div class="title">综合评分</div>
+          <div class="rank">高于周边商家{{ info.rankRate }}%</div>
+        </div>
+        <div class="overview-right">
+          <div class="score-wrapper">
+            <span class="title">服务态度</span>
+            <Star :score="info.serviceScore" :size="36" />
+            <span class="score">{{ info.serviceScore }} </span>
+          </div>
+          <div class="score-wrapper">
+            <span class="title">商品评分</span>
+            <Star :score="info.foodScore" :size="36" />
+            <span class="score">{{ info.foodScore }} </span>
+          </div>
+          <div class="delivery-wrapper">
+            <span class="title">送达时间</span>
+            <span class="delivery">{{ info.deliveryTime }} 分钟</span>
+          </div>
+        </div>
+      </div>
+      <div class="split"></div>
+      <div class="ratingselect">
+        <div class="rating-type border-1px">
+          <span
+            class="block positive"
+            :class="{ active: selectType == 2 }"
+            @click="setSelectType(2)"
+          >
+            全部<span class="count">{{ ratings.length }} </span>
+          </span>
+          <span
+            class="block positive"
+            :class="{ active: selectType == 0 }"
+            @click="setSelectType(0)"
+          >
+            满意<span class="count">{{ positiveCount }} </span>
+          </span>
+          <span
+            class="block negative"
+            :class="{ active: selectType == 1 }"
+            @click="setSelectType(1)"
+          >
+            不满意<span class="count"
+              >{{ ratings.length - positiveCount }}
+            </span>
+          </span>
+        </div>
+        <div
+          class="switch"
+          :class="{ on: onlyShowText }"
+          @click="toggleShowText"
+        >
+          <span class="iconfont icon-duigouxiao"></span>
+          <span class="text">只看有内容的评价</span>
+        </div>
+      </div>
+      <div class="rating-wrapper">
+        <ul>
+          <li
+            class="rating-item"
+            v-for="(rating, index) in filterRatings"
+            :key="index"
+          >
+            <div class="avatar">
+              <img width="28" height="28" :src="rating.avatar" />
+            </div>
+            <div class="content">
+              <h1 class="name">{{ rating.username }}</h1>
+              <div class="star-wrapper">
+                <Star :score="5" :size="24" />
+                <span class="delivery">{{ rating.deliveryTime }} </span>
+              </div>
+              <p class="text">{{ rating.text }}</p>
+              <div class="recommend">
+                <span class="iconfont icon-tuijian"></span>
+                <span
+                  class="item"
+                  v-for="(recommend, index) in rating.recommend"
+                  :key="index"
+                  >{{ recommend }}</span
+                >
+              </div>
+              <div class="time">{{ rating.rateTime | dateString }}</div>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import BScroll from "@better-scroll/core";
+import { mapGetters, mapState } from "vuex";
+import Star from "@/components/Star/Star.vue";
+export default {
+  name: "ShopRatings",
+  data() {
+    return {
+      selectType: 2, //用于控制全部和满意-不满意
+      onlyShowText: false, //用于控制是否显示有价值的评论
+    };
+  },
+  components: {
+    Star,
+  },
+  mounted() {
+    //页面加载完成发送ajax获取数据
+    this.$store.dispatch("getShopRatings", () => {
+      // 页面加载的时候触发回调函数
+      this.$nextTick(() => {
+        // 判断是否存在
+        if (!this.scroll) {
+          this.scroll = new BScroll(this.$refs.ratings, {
+            // 允许点击
+            click: true,
+          });
+        } else {
+          // 有对象那么就重新刷新一下
+          this.scroll.refresh();
+        }
+      });
+    });
+  },
+  computed: {
+    ...mapState({
+      ratings: (state) => state.shop.ratings,
+      info: (state) => state.shop.info,
+    }),
+    // 计算满意的数量
+    positiveCount() {
+      // 数量累加
+      return this.ratings.reduce((perTotal, rating) => {
+        return perTotal + (rating.rateType === 0 ? 1 : 0);
+      }, 0);
+    },
+
+    //根据用户的操作重新过滤出新的数组
+    filterRatings() {
+      // 得到需要的数据
+      const { ratings, selectType, onlyShowText } = this;
+      //对原数组进行条件过滤
+      return ratings.filter((rating) => {
+        const { rateType, text } = rating;
+        // 条件1：selectType: 0 1 2
+        // rateType: 0 1
+        // 条件2：onlyShowText
+        // onlyShowText==text.length>0
+
+        // 表示查看所以的评论
+        // if (selectType == 2) {
+        //   if (onlyShowText) {
+        //     return text.length > 0;
+        //   }
+        //   return rating;
+        // } else if (selectType == 0) {
+        //   // 满意
+        //   if (onlyShowText) {
+        //     return rateType == 0 && text.length > 0;
+        //   }
+        //   return rateType == 0;
+        // } else if (selectType == 1) {
+        //   // 和不满意
+        //   if (onlyShowText) {
+        //     return rateType > 0 && text.length > 0;
+        //   }
+        //   return rateType > 0;
+        // }
+        // ||:左边满足了就不会执行右边的
+        // 当selectType==2的时候然以后判断是!onlyShowText还是text.length>0 
+        // !onlyShowText：当状态为false的时候变为true 所以表达式则不会改变显示 只有状态为true然后有个！变为false执行后面的数
+        return (selectType==2 || selectType==rateType ) && (!onlyShowText || text.length>0 )
+      });
+    },
+  },
+  methods: {
+    //内容评价展示与隐藏
+    toggleShowText() {
+      this.onlyShowText = !this.onlyShowText;
+    },
+    //点击改变点击的背景颜色showText
+    setSelectType(value) {
+      // 得到的值给selectType
+      this.selectType = value;
+    },
+  },
+};
+</script>
+
+<style lang="stylus" rel="stylesheet/stylus">
+@import '../../../common/stylus/mixins.styl';
+
+.ratings {
+  position: absolute;
+  top: 195px;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden;
+  background: #fff;
+
+  .overview {
+    display: flex;
+    padding: 18px 0;
+
+    .overview-left {
+      flex: 0 0 137px;
+      padding: 6px 0;
+      width: 137px;
+      border-right: 1px solid rgba(7, 17, 27, 0.1);
+      text-align: center;
+
+      @media only screen and (max-width: 320px) {
+        flex: 0 0 120px;
+        width: 120px;
+      }
+
+      .score {
+        margin-bottom: 6px;
+        line-height: 28px;
+        font-size: 24px;
+        color: rgb(255, 153, 0);
+      }
+
+      .title {
+        margin-bottom: 8px;
+        line-height: 12px;
+        font-size: 12px;
+        color: rgb(7, 17, 27);
+      }
+
+      .rank {
+        line-height: 10px;
+        font-size: 10px;
+        color: rgb(147, 153, 159);
+      }
+    }
+
+    .overview-right {
+      flex: 1;
+      padding: 6px 0 6px 24px;
+
+      @media only screen and (max-width: 320px) {
+        padding-left: 6px;
+      }
+
+      .score-wrapper {
+        margin-bottom: 8px;
+        font-size: 0;
+
+        .title {
+          display: inline-block;
+          line-height: 18px;
+          vertical-align: top;
+          font-size: 12px;
+          color: rgb(7, 17, 27);
+        }
+
+        .star {
+          display: inline-block;
+          margin: 0 12px;
+          vertical-align: top;
+        }
+
+        .score {
+          display: inline-block;
+          line-height: 18px;
+          vertical-align: top;
+          font-size: 12px;
+          color: rgb(255, 153, 0);
+        }
+      }
+
+      .delivery-wrapper {
+        font-size: 0;
+
+        .title {
+          line-height: 18px;
+          font-size: 12px;
+          color: rgb(7, 17, 27);
+        }
+
+        .delivery {
+          margin-left: 12px;
+          font-size: 12px;
+          color: rgb(147, 153, 159);
+        }
+      }
+    }
+  }
+
+  .split {
+    width: 100%;
+    height: 16px;
+    border-top: 1px solid rgba(7, 17, 27, 0.1);
+    border-bottom: 1px solid rgba(7, 17, 27, 0.1);
+    background: #f3f5f7;
+  }
+
+  .ratingselect {
+    .rating-type {
+      padding: 18px 0;
+      margin: 0 18px;
+      border-1px(rgba(7, 17, 27, 0.1));
+      font-size: 0;
+
+      .block {
+        display: inline-block;
+        padding: 8px 12px;
+        margin-right: 8px;
+        line-height: 16px;
+        border-radius: 1px;
+        font-size: 12px;
+        color: rgb(77, 85, 93);
+        background: rgba(77, 85, 93, 0.2);
+
+        &.active {
+          background: $green;
+          color: #fff;
+        }
+
+        .count {
+          margin-left: 2px;
+          font-size: 8px;
+        }
+      }
+    }
+
+    .switch {
+      padding: 12px 18px;
+      line-height: 24px;
+      border-bottom: 1px solid rgba(7, 17, 27, 0.1);
+      color: rgb(147, 153, 159);
+      font-size: 0;
+
+      &.on {
+        .icon-duigouxiao {
+          color: $green;
+        }
+      }
+
+      .icon-duigouxiao {
+        display: inline-block;
+        vertical-align: top;
+        margin-right: 4px;
+        font-size: 24px;
+      }
+
+      .text {
+        display: inline-block;
+        vertical-align: top;
+        font-size: 12px;
+      }
+    }
+  }
+
+  .rating-wrapper {
+    padding: 0 18px;
+
+    .rating-item {
+      display: flex;
+      padding: 18px 0;
+      bottom-border-1px(rgba(7, 17, 27, 0.1));
+
+      .avatar {
+        flex: 0 0 28px;
+        width: 28px;
+        margin-right: 12px;
+
+        img {
+          border-radius: 50%;
+        }
+      }
+
+      .content {
+        position: relative;
+        flex: 1;
+
+        .name {
+          margin-bottom: 4px;
+          line-height: 12px;
+          font-size: 10px;
+          color: rgb(7, 17, 27);
+        }
+
+        .star-wrapper {
+          margin-bottom: 10px;
+          font-size: 0;
+
+          .star {
+            display: inline-block;
+            margin-right: 6px;
+            vertical-align: top;
+          }
+
+          .delivery {
+            display: inline-block;
+            vertical-align: top;
+            line-height: 12px;
+            font-size: 10px;
+            color: rgb(147, 153, 159);
+          }
+        }
+
+        .text {
+          margin-bottom: 10px;
+          line-height: 18px;
+          color: rgb(7, 17, 27);
+          font-size: 12px;
+        }
+
+        .recommend {
+          line-height: 16px;
+          font-size: 0;
+
+          .icon-tuijian, .icon-thumb_down, .item {
+            display: inline-block;
+            margin: 0 8px 4px 0;
+            font-size: 14px;
+          }
+
+          .icon-tuijian {
+            color: $yellow;
+          }
+
+          .icon-thumb_down {
+            color: rgb(147, 153, 159);
+          }
+
+          .item {
+            padding: 0 6px;
+            border: 1px solid rgba(7, 17, 27, 0.1);
+            border-radius: 1px;
+            color: rgb(147, 153, 159);
+            background: #fff;
+          }
+        }
+
+        .time {
+          position: absolute;
+          top: 0;
+          right: 0;
+          line-height: 12px;
+          font-size: 10px;
+          color: rgb(147, 153, 159);
+        }
+      }
+    }
+  }
+}
+</style>
